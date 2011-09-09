@@ -1,0 +1,150 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<style>
+body { 
+  font-family: monospace;
+  background-color: green;
+}
+
+.card {  
+  font-size: 200%;
+  position: absolute;
+  display: block;
+  width: 100px;
+  height: 140px;
+  background-color: white;
+  border: solid 1px #000;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+}
+
+.card_index {
+  font-size: 50%;
+  position: absolute; top: 0%; left: 0%;
+}
+    
+.card_index_2 {
+  font-size: 50%;
+  position: absolute; top: 80%; left: 88%;
+}
+    
+    
+.card_red {
+  color: red;
+} 
+    
+.back {
+  background-color: #a00; 
+  border: solid 1px black;
+}
+
+.back * {
+  visibility:hidden;  
+}
+
+.spot_A1 { position: absolute; top: 5%  ; left: 15%; }
+.spot_A2 { position: absolute; top: 23% ; left: 15%; }
+.spot_A3 { position: absolute; top: 41% ; left: 15%; }
+.spot_A4 { position: absolute; top: 59% ; left: 15%; }
+.spot_A5 { position: absolute; top: 77% ; left: 15%; }
+
+.spot_B1 { position: absolute; top: 5%  ; left: 40%; }
+.spot_B2 { position: absolute; top: 23% ; left: 40%; }
+.spot_B3 { position: absolute; top: 41% ; left: 40%; }
+.spot_B4 { position: absolute; top: 59% ; left: 40%; }
+.spot_B5 { position: absolute; top: 77% ; left: 40%; }
+
+.spot_C1 { position: absolute; top: 5%  ; left: 65%; }
+.spot_C2 { position: absolute; top: 23% ; left: 65%; }
+.spot_C3 { position: absolute; top: 41% ; left: 65%; }
+.spot_C4 { position: absolute; top: 59% ; left: 65%; }
+.spot_C5 { position: absolute; top: 77% ; left: 65%; }
+
+.spot_middle { 
+  position: absolute; top: 37% ; left: 35%;
+  font-size: 150%; 
+}
+
+.spot_test { position: absolute; top:0%; left:40%; }
+
+</style>
+<script>
+
+function $id(id) {
+  return document.getElementById(id)
+} 
+
+function $create(kind) {
+  return document.createElement('div')
+}
+
+function main() { 
+var field = $id('field') 
+var s_1 = $create('div')
+s_1.setAttribute('id', 's_1')
+s_1.setAttribute('class', 'card front')
+s_1.style.left='300px'
+i1 = document.createElement('div')
+i1.innerHtml = "A<br>&spades;"
+s_1.appendChild(i1)
+i1.setAttribute('class', 'card_index')
+field.appendChild(s_1)
+} 
+
+window.onload = main
+
+</script>
+</head>
+<body id="field">
+
+<div id="s_10" class="card front">
+<div class="card_index">10<br>&spades;
+</div>
+</div>
+
+<div class="card back" style="top:100px; left:120px;">
+<div class="card_index">10<br>&spades;</div>
+<div class="spot_A1">&hearts;</div>
+<div class="spot_A2">&hearts;</div>
+<div class="spot_A3">&hearts;</div>
+<div class="spot_A4">&hearts;</div>
+<div class="spot_A5">&hearts;</div>
+<div class="spot_B1">&hearts;</div>
+<div class="spot_B2">&hearts;</div>
+<div class="spot_middle">J</div>
+<div class="spot_B4">&hearts;</div>
+<div class="spot_B5">&hearts;</div>
+<div class="spot_C1">&hearts;</div>
+<div class="spot_C2">&hearts;</div>
+<div class="spot_C3">&hearts;</div>
+<div class="spot_C4">&hearts;</div>
+<div class="spot_C5">&hearts;</div>
+<div class="card_index_2">&hearts;<br>1</div>
+</div>
+
+<div class="card card_red" style="top:200px; left:120px;">
+<div class="card_index">1<br>&hearts;  
+</div>
+<!-- <div style="position: absolute; top:30%; left:30%;"> -->
+<div class="spot_A1">&hearts;</div>
+<div class="spot_A2">&hearts;</div>
+<div class="spot_A3">&hearts;</div>
+<div class="spot_A4">&hearts;</div>
+<div class="spot_A5">&hearts;</div>
+<div class="spot_B1">&hearts;</div>
+<div class="spot_B2">&hearts;</div>
+<div class="spot_middle">J</div>
+<div class="spot_B4">&hearts;</div>
+<div class="spot_B5">&hearts;</div>
+<div class="spot_C1">&hearts;</div>
+<div class="spot_C2">&hearts;</div>
+<div class="spot_C3">&hearts;</div>
+<div class="spot_C4">&hearts;</div>
+<div class="spot_C5">&hearts;</div>
+<div class="card_index_2">&hearts;<br>1</div>
+</div>
+
+
+</body>
+</html>
