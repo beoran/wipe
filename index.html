@@ -14,9 +14,6 @@ body {
   width: 100px;
   height: 140px;
   background-color: white;
-  border: solid 1px #000;
-  -moz-border-radius: 4px;
-  border-radius: 4px;
 }
 
 .card_index {
@@ -47,6 +44,22 @@ body {
   visibility:hidden;  
 }
 
+.card_sel {
+  background-color: #bff;
+  outline: solid 3px cyan;
+  border: solid 1px cyan;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+  /* outline: solid 3px cyan; */  
+}
+
+.card_nosel {
+  border: solid 1px black;
+  -moz-border-radius: 4px;
+  border-radius: 4px;  
+}
+
+
 .spot_a1 { position: absolute; top: 5%  ; left: 15%; }
 .spot_a2 { position: absolute; top: 23% ; left: 15%; }
 .spot_a3 { position: absolute; top: 41% ; left: 15%; }
@@ -71,6 +84,13 @@ body {
 }
 
 .spot_test { position: absolute; top:0%; left:40%; }
+
+#message { 
+  position: absolute; top:90%; left:0%;
+  background-color: white;
+  width: 100%;
+  height: 10%;  
+}
 
 </style>
 <script>
@@ -149,10 +169,8 @@ function $event(obj, evt, fn) {
 
 /** Removes event handler */
 function $noevent(obj, evt, fn) {
-  if (obj.removeEventListener)
-    obj.removeEventListener(evt,fn,false);
-  else if (obj.detachEvent)
-    obj.detachEvent('on'+evt,fn);
+  if (obj.removeEventListener)  obj.removeEventListener(evt,fn,false)
+  else if (obj.detachEvent) obj.detachEvent('on'+evt,fn)
 }
 
 /** Portable x coordinate for mouse event. */
@@ -162,7 +180,7 @@ function $mouse_x(e) {
   } else if (e.clientX)     {         
     return e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;     
   }
-  return -1;  
+  return -1  
 }
 
 /** Portable y coordinate for mouse event. */
@@ -172,7 +190,41 @@ function $mouse_y(e) {
   } else if (e.clientY)     {         
      return e.clientY + document.body.scrollTop + document.documentElement.scrollTop;     
    }
-   return -1;  
+   return -1  
+}
+
+/** Very simple string formatting */
+function $vformat(str, array) {   
+  var len = array.length
+  // For each {0} {1} {n...} replace with the argument in that position. If
+  // the argument is an object or an array it will be stringified using toString.
+  for (i = 0; i < len; i++) {
+    arg = arguments[i]
+    safe = arg.toString ? arg.toString() : arg
+    str  = str.replace(RegExp('\\{'+(i)+'\\}', 'g'), safe)
+  }
+  return str
+}
+
+/** Very simple string formatting */
+function $format() {
+  var args = Array.prototype.slice.call(arguments);
+  $vformat(args.shift, args);
+}
+
+
+/** Outputs text to a div with the id "message" */
+function $message(text) {
+  div = $id('message')
+  if(!div) {
+    alert(text) 
+    return
+  }
+  div.innerHTML  += " " + text + "</br>"
+  div.style.overflow = "auto"
+  // scroll down window
+  div.scrollTop = div.scrollHeight;
+  return text
 }
  
 /** Portable x and y coordinate for mouse event. */
@@ -222,7 +274,30 @@ Card.RANKS        = [ Card.RANK_ACE   , Card.RANK_2, Card.RANK_3 , Card.RANK_4,
                     ]
 
 Card.SUITS        = [ Card.SUIT_HEARTS  , Card.SUIT_SPADES,
-                      Card.SUIT_DIAMONDS, Card.SUIT_HEARTS ]
+                      Card.SUIT_DIAMONDS, Card.SUIT_HEARTS 
+                    ]
+Card.SUIT_NAMES   = {} 
+Card.SUIT_NAMES[Card.SUIT_HEARTS]   = "Hearts"
+Card.SUIT_NAMES[Card.SUIT_SPADES]   = "Spades"
+Card.SUIT_NAMES[Card.SUIT_DIAMONDS] = "Diamonds"
+Card.SUIT_NAMES[Card.SUIT_CLUBS]    = "Clubs"
+
+Card.RANK_NAMES   = {} 
+Card.RANK_NAMES[Card.RANK_ACE]    = "Ace"
+Card.RANK_NAMES[Card.RANK_2]      = "Two"
+Card.RANK_NAMES[Card.RANK_3]      = "Three"
+Card.RANK_NAMES[Card.RANK_4]      = "Four"
+Card.RANK_NAMES[Card.RANK_5]      = "Five"
+Card.RANK_NAMES[Card.RANK_6]      = "Six"
+Card.RANK_NAMES[Card.RANK_7]      = "Seven"
+Card.RANK_NAMES[Card.RANK_8]      = "Eight"
+Card.RANK_NAMES[Card.RANK_9]      = "Nine"
+Card.RANK_NAMES[Card.RANK_10]     = "Ten"
+Card.RANK_NAMES[Card.RANK_JACK]   = "Jack"
+Card.RANK_NAMES[Card.RANK_QUEEN]  = "Queen"
+Card.RANK_NAMES[Card.RANK_KING]   = "King"
+
+                      
 Card.TEST = {
   'a' : '10',
   'b' : 20,
@@ -239,11 +314,35 @@ Card.SUIT_COLOR[Card.SUIT_DIAMONDS]= 'card_red'
 Card.SUIT_COLOR[Card.SUIT_CLUBS]   = 'card_black'
 Card.SUIT_COLOR[Card.SUIT_SPADES]  = 'card_black'
 
+Card.make_id = function (suit, rank) {
+  return 'card_id_' + suit + '_' + rank
+}
+
 /** A deck of cards contains all ranks for every suit once. */
 Card.Deck = function() {
-  this._cards = []
+  this._cards   = []
+  this._lookup  = {}
+  for (rank in Card.RANKS) {
+    for (suit in Card.SUITS) {
+      card = new Card.Card(Card.SUITS[suit], Card.RANKS[rank])
+      $message("New card: " + card.name())
+      this._cards.push(card)
+      this._lookup[card.html_id()] = card
+    } 
+  }  
+}
+
+Card.Deck.prototype = {
+  lookup_id : function(id) {
+    return this._lookup[id]
+  },
   
-  this._cards
+  lookup : function(suit, rank) {
+    id  = Card.make_id(suit, rank)    
+    res = this.lookup_id(id)
+    $message("Fetching card with id: " + id)
+    return res
+  }
 }
 
 
@@ -280,18 +379,54 @@ Card.Card = function(suit, rank) {
   this._rank = rank
   this._show = true
   this._div  = null
+  this._sel  = false
+  this.update()
 }
 
-Card.Card.prototype    = {
+Card.Card.prototype  = {
+
+  name : function()  {
+    return this.rank_name() + ' of ' + this.suit_name()
+  },
+  
+  rank_name : function()  {
+    return Card.RANK_NAMES[this._rank]
+  },
+
+  suit_name : function()  {
+    return Card.SUIT_NAMES[this._suit]
+  },
+
   make : function (suit, rank) {
   },
+
+  select : function() {
+    $message("Selected  " + this.name())
+    this._sel = true
+    this.update()
+  },
+  
+  unselect : function() {
+    $message("Unselected  " + this.name())
+    this._sel = false
+    this.update()
+  },
+  
+  toggle_select : function() {
+    if(this._sel) {
+      return this.unselect();
+    } else {
+      return this.select();
+    }
+  },
+  
   
   html_suit : function () {
     return Card.HTML_SUIT[this._suit]
   },
   
   html_id : function() {
-    return this._suit + '_' + this._rank
+    return Card.make_id(this._suit, this._rank)
   },
   
   html_index : function() {
@@ -303,13 +438,14 @@ Card.Card.prototype    = {
   },
   
   html_color_class : function() { 
-    return Card.SUIT_COLOR[this._suit];
+    return Card.SUIT_COLOR[this._suit]
   },
   
   html_class : function() {
-    var show  = this._show ? 'card_front' : 'card_back';
+    var show  = this._show ? 'card_front' : 'card_back'
+    var sele  = this._sel  ? 'card_sel'   : 'card_nosel'
     var color = this.html_color_class()
-    return  'card ' + color + ' ' + show
+    return  'card ' + color + ' ' + show + ' ' + sele
   },
   
   make_spot : function(div, rc, inner) {
@@ -359,13 +495,14 @@ Card.Card.prototype    = {
   },
   
   on_click : function(e) {
-    // alert('Clicked: ' + e.toString() + ' ' + this.toString())
-    this.setAttribute('class', 'card card_back')
+    var card = this.dataCard
+    card.toggle_select()
   },
   
   make_div : function() {
     var field = $id('field')
     var cdiv  = $spawn(field, 'div')
+    cdiv.dataCard = this
     cdiv.setAttribute('id', this.html_id())
     cdiv.setAttribute('class', this.html_class())
     i1 = $spawn(cdiv, 'div')
@@ -375,7 +512,7 @@ Card.Card.prototype    = {
     i2.innerHTML =  this.html_index_2()
     i2.setAttribute('class', 'card_index_2')
     this.make_all_spots(cdiv)
-    $event(cdiv, 'click', Card.Card.prototype.on_click)
+    $event(cdiv, 'click', Card.Card.prototype.on_click)    
     return cdiv
   },
   
@@ -388,6 +525,7 @@ Card.Card.prototype    = {
   div : function() {    
     if (this._div) return this._div    
     this._div = this.make_div()
+    this.update()
     return this._div
   },
   
@@ -399,21 +537,35 @@ Card.Card.prototype    = {
 
 stack = new Card.Stack(0, 0)
 
-function main() { 
-  var card  = new Card.Card('h', 'A')
+
+
+
+function main() {
+  var deck  = new Card.Deck()  
+  var card  = deck.lookup('h', 'A')
+  var card2 = deck.lookup('d', '10')
+  var card3 = deck.lookup('s', 'J')  
+  var card4 = deck.lookup('c', 'K')
+  
+  /* var card  = new Card.Card('h', 'A')
   var card2 = new Card.Card('d', '10')
   var card3 = new Card.Card('s', 'J')
   var card4 = new Card.Card('c', 'K')
-  var card5 = new Card.Card('h', 'Q')
+  var card5 = new Card.Card('h', 'Q') */
   
+  card.move(300, 20)
+  
+  /*
   card.update()
   card2.update()
-  card.move(300, 20)
+  */
   card2.move(360, 30)
   card3.move(300, 240)
   card4.move(360, 250)
+  /*
   card5.move(0, 0)
   stack.add(card2)
+  */
 /*
 var field = $id('field') 
 var s_1 = $create('div')
@@ -438,6 +590,6 @@ window.onload = main
 </head>
 <body id="field">
 
-
+<div id="message"></div>
 </body>
 </html>
