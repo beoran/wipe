@@ -405,7 +405,7 @@ Card.Place.prototype = {
 /** A deck of cards contains all ranks for every suit once. It's also useable 
 as the a stock pile. */
 Card.Deck = function() {
-  Card.Place.call(this)
+  Card.Place.call(this) // call parent constructor
   // this._cards   = []
   this._lookup  = {}
   for (rank in Card.RANKS) {
