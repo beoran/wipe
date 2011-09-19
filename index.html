@@ -141,7 +141,7 @@ function $inherit(child, parent) {
   var Empty = function() {}
   // Here's where the inheritance occurs 
   Empty.prototype = parent
-  child.prototype = new parent()
+  child.prototype = new Empty()
   child.prototype.constructor=parent
   return child.prototype
 }
@@ -249,7 +249,7 @@ MouseEvent.prototype.yy = function() {
 
 
 Card              = {}
-Card.Rank         = {}
+/** Ranks */
 Card.RANK_ACE     = 'A'
 Card.RANK_2       = '2'
 Card.RANK_3       = '3'
@@ -263,25 +263,30 @@ Card.RANK_10      = '10'
 Card.RANK_JACK    = 'J'
 Card.RANK_QUEEN   = 'Q'
 Card.RANK_KING    = 'K'
+/** Suits */
 Card.SUIT_HEARTS  = 'h'
 Card.SUIT_CLUBS   = 'c'
 Card.SUIT_SPADES  = 's'
 Card.SUIT_DIAMONDS= 'd'
-Card.RANKS        = [ Card.RANK_ACE   , Card.RANK_2, Card.RANK_3 , Card.RANK_4, 
-                      Card.RANK_5     , Card.RANK_6, Card.RANK_7 , Card.RANK_8,
-                      Card.RANK_8     , Card.RANK_9, Card.RANK_10, Card.RANK_JACK,
+/** Array of ranks. */
+Card.RANKS        = [ Card.RANK_ACE   , Card.RANK_2 , Card.RANK_3 , Card.RANK_4, 
+                      Card.RANK_5     , Card.RANK_6 , Card.RANK_7 , Card.RANK_8,
+                      Card.RANK_9     , Card.RANK_10, Card.RANK_JACK,
                       Card.RANK_QUEEN , Card.RANK_KING
                     ]
-
+/** Array of suits */
 Card.SUITS        = [ Card.SUIT_HEARTS  , Card.SUIT_SPADES,
-                      Card.SUIT_DIAMONDS, Card.SUIT_HEARTS 
+                      Card.SUIT_DIAMONDS, Card.SUIT_CLUBS
                     ]
+                    
+/** Textual names of suits. */
 Card.SUIT_NAMES   = {} 
 Card.SUIT_NAMES[Card.SUIT_HEARTS]   = "Hearts"
 Card.SUIT_NAMES[Card.SUIT_SPADES]   = "Spades"
 Card.SUIT_NAMES[Card.SUIT_DIAMONDS] = "Diamonds"
 Card.SUIT_NAMES[Card.SUIT_CLUBS]    = "Clubs"
 
+/** Textual names of ranks. */
 Card.RANK_NAMES   = {} 
 Card.RANK_NAMES[Card.RANK_ACE]    = "Ace"
 Card.RANK_NAMES[Card.RANK_2]      = "Two"
@@ -297,54 +302,41 @@ Card.RANK_NAMES[Card.RANK_JACK]   = "Jack"
 Card.RANK_NAMES[Card.RANK_QUEEN]  = "Queen"
 Card.RANK_NAMES[Card.RANK_KING]   = "King"
 
-                      
-Card.TEST = {
-  'a' : '10',
-  'b' : 20,
-}
-
+/** HTML symbol to use for a suit. */
 Card.HTML_SUIT = {}
 Card.HTML_SUIT[Card.SUIT_HEARTS]  = '&hearts;'
 Card.HTML_SUIT[Card.SUIT_CLUBS]   = '&clubs;'
 Card.HTML_SUIT[Card.SUIT_SPADES]  = '&spades;'
 Card.HTML_SUIT[Card.SUIT_DIAMONDS]= '&diams;'
+
+/** CSS color to use for a suit*/
 Card.SUIT_COLOR = {}
 Card.SUIT_COLOR[Card.SUIT_HEARTS]  = 'card_red'
 Card.SUIT_COLOR[Card.SUIT_DIAMONDS]= 'card_red'
 Card.SUIT_COLOR[Card.SUIT_CLUBS]   = 'card_black'
 Card.SUIT_COLOR[Card.SUIT_SPADES]  = 'card_black'
+Card.SUIT_UTF8 = {}
+Card.SUIT_UTF8[Card.SUIT_HEARTS]  = '♥'
+Card.SUIT_UTF8[Card.SUIT_DIAMONDS]= '♦'
+Card.SUIT_UTF8[Card.SUIT_CLUBS]   = '♣'
+Card.SUIT_UTF8[Card.SUIT_SPADES]  = '♠'
 
+
+/** Makes an id for a given rank and suit. */
 Card.make_id = function (suit, rank) {
   return 'card_id_' + suit + '_' + rank
 }
 
-/** A deck of cards contains all ranks for every suit once. */
-Card.Deck = function() {
-  this._cards   = []
-  this._lookup  = {}
-  for (rank in Card.RANKS) {
-    for (suit in Card.SUITS) {
-      card = new Card.Card(Card.SUITS[suit], Card.RANKS[rank])
-      $message("New card: " + card.name())
-      this._cards.push(card)
-      this._lookup[card.html_id()] = card
-    } 
-  }  
+/** Makes a short name for a given ank and suit. */
+Card.short_name = function (suit, rank) {
+  return Card.SUIT_UTF8[suit] + rank
 }
 
-Card.Deck.prototype = {
-  lookup_id : function(id) {
-    return this._lookup[id]
-  },
-  
-  lookup : function(suit, rank) {
-    id  = Card.make_id(suit, rank)    
-    res = this.lookup_id(id)
-    $message("Fetching card with id: " + id)
-    return res
-  }
-}
 
+/** Returns a random number between high and low. */
+Card.random = function (low, high) {
+  return Math.floor(Math.random() * (high - low)) + low
+}
 
 /** A place can contain one or more cards. */
 Card.Place = function(x, y) {
@@ -353,11 +345,116 @@ Card.Place = function(x, y) {
   this._cards = []
 }
 
+/** adds a function to an object's prototype */
+function $def(obj, name, func) {
+  obj.prototype[name] = func
+}
+
 Card.Place.prototype = {
   add : function(card) {
     this._cards.push(card)
+  },
+  
+  /** Removes a card at the given position from the Place and returns it. */
+  remove : function(index) {
+    cards = this._cards.splice(index, 1)
+    card  = cards[0]
+    card.z(-1)
+    return card
+  },
+  
+  /** Inserts a card to the Place at the given position and returns it. */
+  insert : function(index, card) {
+    this._cards.splice(index, 0, card)
+    card.z(index)
+    return card
+  },
+  
+  /** Shifts a card from one position to the next in the Place. */
+  shift : function(from, to) {
+    card = this.remove(from)
+    return this.insert(to, card)
+  },
+  
+  /** Moves a card from this place's indx from to the other place's index to */
+  move : function(from, other, to) {
+    card = this.remove(from)
+    other.insert(to, card)
+  },
+  
+  /** Amount of cards in this Place*/
+  size : function() {
+    return this._cards.length
+  },
+  
+  toString : function() {
+    res = '['
+    for (i in this._cards) {
+      card = this._cards[i]
+      res += card.short_name()
+      res += ", "
+    }
+    res += "]"
+    return res
   }
+
 }
+
+
+
+/** A deck of cards contains all ranks for every suit once. It's also useable 
+as the a stock pile. */
+Card.Deck = function() {
+  Card.Place.call(this)
+  // this._cards   = []
+  this._lookup  = {}
+  for (rank in Card.RANKS) {
+    for (suit in Card.SUITS) {
+      card = new Card.Card(Card.SUITS[suit], Card.RANKS[rank])
+      $message("New card: " + card.name())
+      this.add(card)
+      this._lookup[card.html_id()] = card
+    } 
+  }  
+  // this.shuffle()
+}
+
+Card.Deck.prototype = Card.Place.prototype
+
+/** Looks up a card in this deck by it's id. */
+$def(Card.Deck, 'lookup_id', function(id) {
+  return this._lookup[id]
+})
+  
+/** Looks up a card in the card index by it's suit and rank. */
+$def(Card.Deck, 'lookup', function(suit, rank) {
+    id  = Card.make_id(suit, rank)    
+    res = this.lookup_id(id)
+    $message("Fetching card with id: " + id)
+    return res
+})
+  
+  /** Deals a single cards from the top of this deck and returns it.
+  * The card is removed from the deck (though not from the card index)
+  */
+$def(Card.Deck, 'deal_one', function() {
+    card = this.remove(0)
+    return card
+})
+  
+  /** Shuffles the deck. */
+$def(Card.Deck, 'shuffle',  function () {
+    size    = this._cards.length
+    repeats = size / 2
+    for(var i = 0; i < size; i++) {
+      // change the position of a card randomly
+      from              = Card.random(0, size)
+      to                = Card.random(0, size)
+      this.shift(from, to)
+    }
+})
+
+
 
 Card.Stack = function(x, y) {
   // call parent constructor
@@ -385,8 +482,24 @@ Card.Card = function(suit, rank) {
 
 Card.Card.prototype  = {
 
+  style : function () {
+    return this.div().style
+  },
+
+  z : function() {
+    if(arguments.length > 0 ) { 
+      zindex = parseInt(arguments[0])
+      this.style().zIndex = zindex
+    }
+    return this.style().zIndex
+  },
+
   name : function()  {
     return this.rank_name() + ' of ' + this.suit_name()
+  },
+  
+  short_name : function() { 
+    return Card.short_name(this._suit, this._rank);
   },
   
   rank_name : function()  {
@@ -541,11 +654,16 @@ stack = new Card.Stack(0, 0)
 
 
 function main() {
-  var deck  = new Card.Deck()  
-  var card  = deck.lookup('h', 'A')
-  var card2 = deck.lookup('d', '10')
-  var card3 = deck.lookup('s', 'J')  
-  var card4 = deck.lookup('c', 'K')
+  var deck  = new Card.Deck() 
+  $message(deck.toString())
+  $message("Deck length" + deck.size())
+  // deck.shuffle();
+  var card  = deck.deal_one()
+  var card2 = deck.deal_one()
+  var card3 = deck.deal_one()
+  var card4 = deck.deal_one()
+  $message("Deck length" + deck.size())
+  
   
   /* var card  = new Card.Card('h', 'A')
   var card2 = new Card.Card('d', '10')
