@@ -138,11 +138,8 @@ function $spawnid(id, kind) {
 
 /** Prototype based inheritance */
 function $inherit(child, parent) { 
-  var Empty = function() {}
-  // Here's where the inheritance occurs 
-  Empty.prototype = parent
-  child.prototype = new Empty()
-  child.prototype.constructor=parent
+  child.prototype = new parent()
+  child.prototype.constructor = parent
   return child.prototype
 }
 
@@ -419,31 +416,33 @@ Card.Deck = function() {
   // this.shuffle()
 }
 
-Card.Deck.prototype = Card.Place.prototype
+// prototype based inheritance
+$inherit(Card.Deck, Card.Place)
+
 
 /** Looks up a card in this deck by it's id. */
-$def(Card.Deck, 'lookup_id', function(id) {
+Card.Deck.prototype.lookup_id = function(id) {
   return this._lookup[id]
-})
+}
   
 /** Looks up a card in the card index by it's suit and rank. */
-$def(Card.Deck, 'lookup', function(suit, rank) {
+Card.Deck.prototype.lookup = function(suit, rank) {
     id  = Card.make_id(suit, rank)    
     res = this.lookup_id(id)
     $message("Fetching card with id: " + id)
     return res
-})
+}
   
-  /** Deals a single cards from the top of this deck and returns it.
-  * The card is removed from the deck (though not from the card index)
-  */
-$def(Card.Deck, 'deal_one', function() {
+/** Deals a single cards from the top of this deck and returns it.
+* The card is removed from the deck (though not from the card index)
+*/
+Card.Deck.prototype.deal_one = function() {
     card = this.remove(0)
     return card
-})
+}
   
-  /** Shuffles the deck. */
-$def(Card.Deck, 'shuffle',  function () {
+/** Shuffles the deck. */
+Card.Deck.prototype.shuffle = function() {
     size    = this._cards.length
     repeats = size / 2
     for(var i = 0; i < size; i++) {
@@ -452,7 +451,7 @@ $def(Card.Deck, 'shuffle',  function () {
       to                = Card.random(0, size)
       this.shift(from, to)
     }
-})
+}
 
 
 
