@@ -105,6 +105,12 @@ function $create(kind) {
   return document.createElement(kind)
 }
 
+/** Shorthand for Array.prototype.slice.call. 
+    Useful to convert arguments to a real array.  */
+function $argarray(arr) {
+  return Array.prototype.slice.call(arr)
+}
+
 /** Gets and sets the style of a node */
 function $style(node, x, y) {
   key   = arguments[0]
@@ -136,7 +142,13 @@ function $spawnid(id, kind) {
    return $spawn(parent, kind)    
 }
 
-/** Prototype based inheritance */
+/** Public. Prototype based inheritance.
+*
+* child  - Function that is uses ada constructor for the child "class".
+* parent - Function that is uses ada constructor for the child "class".
+*
+* Returns the child's prototype.
+*/
 function $inherit(child, parent) { 
   child.prototype = new parent()
   child.prototype.constructor = parent
@@ -145,7 +157,7 @@ function $inherit(child, parent) {
 
 /** Wraps an event handler so it will receive the target object as this. */
 function $wrapevent(obj, fn) {
-  var res = function(e) {  
+  var res = function(e) {
     e = e || window.event
     fn.call(obj, e)
   }
@@ -153,22 +165,23 @@ function $wrapevent(obj, fn) {
 }
 
 /** Public. Installs event handler, and returns it.
-
-obj  - Object to install event handler on.
-evt  - String name of the event to handle without "on" prepended.
-fn   - Function to install as event handler.
-self - Optional. Context to which the this of the fn will be set on call.
-       If absent, obj will be used.
-
-Returns the installed event handler, which is NOT fn, but a wrapper function 
-around fn. The return value must be stored for use with $noevent. */
+*
+* obj  - Object to install event handler on.
+* evt  - String name of the event to handle without "on" prepended.
+* fn   - Function to install as event handler.
+* self - Optional. Context to which the this of the fn will be set on call.
+*       If absent, obj will be used.
+*
+* Returns the installed event handler, which is NOT fn, but a wrapper function 
+* around fn. The return value must be stored for use with $noevent. 
+*/
 function $event(obj, evt, fn, self) {
   // Wrapper that ensures fn is called with the event and 
   // with the object as this
   var myfn = fn
   var wrap = self ? $wrapevent(self, fn) : $wrapevent(obj, fn)
   if (obj.addEventListener) obj.addEventListener(evt, wrap, false)
-  else if (obj.attachEvent) obj.attachEvent('on'+evt,fn)
+  else if (obj.attachEvent) obj.attachEvent('on'+evt, wrap)
   return wrap
 }
 
@@ -236,6 +249,50 @@ function $message(text) {
 function $mouse_xy(e) {
   return {x : $mouse_x(e), y : $mouse_y(e)};
 }
+
+
+function $xmlhttp() {
+  var XMLHttpFactories = [
+    function () {return new XMLHttpRequest()},
+    function () {return new ActiveXObject("Msxml2.XMLHTTP")},
+    function () {return new ActiveXObject("Msxml3.XMLHTTP")},
+    function () {return new ActiveXObject("Microsoft.XMLHTTP")}
+  ];
+  var xmlhttp = false
+  for (var i=0;i<XMLHttpFactories.length;i++) {
+    try {
+      xmlhttp = XMLHttpFactories[i]()
+    } catch (e) {
+      continue
+    }
+    return xmlhttp
+  }
+}
+
+
+/** Portable "ajax-style" live data requests. */
+function $request(url, callback, post) {
+  var req = $xmlhttp()
+  if (!req) return null
+  var method = (post) ? "POST" : "GET"
+  req.open(method, url, true)
+  req.setRequestHeader('User-Agent', 'XMLHTTP/1.0')
+  if (post) { 
+    req.setRequestHeader('Content-type',
+                         'application/x-www-form-urlencoded')
+  }  
+  req.onreadystatechange = function () {
+    if (req.readyState != 4) return;
+    if (req.status != 200 && req.status != 304) {
+      //      alert('HTTP error ' + req.status);
+      return null;
+    }
+    callback(req);
+  }
+  if (req.readyState == 4) return;
+  req.send(post);
+}
+
 
 
 /** Helpers for event handlers. */
@@ -427,14 +484,15 @@ Card.Deck = function() {
 // prototype based inheritance
 $inherit(Card.Deck, Card.Place)
 
+var DeckProto = Card.Deck.prototype
 
 /** Looks up a card in this deck by it's id. */
-Card.Deck.prototype.lookup_id = function(id) {
+DeckProto.lookup_id = function(id) {
   return this._lookup[id]
 }
   
 /** Looks up a card in the card index by it's suit and rank. */
-Card.Deck.prototype.lookup = function(suit, rank) {
+DeckProto.lookup = function(suit, rank) {
     id  = Card.make_id(suit, rank)    
     res = this.lookup_id(id)
     $message("Fetching card with id: " + id)
@@ -444,13 +502,13 @@ Card.Deck.prototype.lookup = function(suit, rank) {
 /** Deals a single cards from the top of this deck and returns it.
 * The card is removed from the deck (though not from the card index)
 */
-Card.Deck.prototype.deal_one = function() {
+DeckProto.deal_one = function() {
     card = this.remove(0)
     return card
 }
   
 /** Shuffles the deck. */
-Card.Deck.prototype.shuffle = function() {
+DeckProto.shuffle = function() {
     size    = this._cards.length
     repeats = size / 2
     for(var i = 0; i < size; i++) {
@@ -615,14 +673,12 @@ Card.Card.prototype  = {
   },
   
   on_click : function(e) {
-    var card = this.dataCard
-    card.toggle_select()
+    this.toggle_select()
   },
   
   make_div : function() {
     var field = $id('field')
     var cdiv  = $spawn(field, 'div')
-    cdiv.dataCard = this
     cdiv.setAttribute('id', this.html_id())
     cdiv.setAttribute('class', this.html_class())
     i1 = $spawn(cdiv, 'div')
@@ -632,7 +688,8 @@ Card.Card.prototype  = {
     i2.innerHTML =  this.html_index_2()
     i2.setAttribute('class', 'card_index_2')
     this.make_all_spots(cdiv)
-    $event(cdiv, 'click', Card.Card.prototype.on_click)    
+    // install event hanedler with this as context.
+    this.click_fn = $event(cdiv, 'click', Card.Card.prototype. on_click, this)
     return cdiv
   },
   
@@ -690,11 +747,12 @@ function main() {
   var deck  = new Card.Deck() 
   $message(deck.toString())
   $message("Deck length" + deck.size())
-  // deck.shuffle();
+  deck.shuffle()
   var card  = deck.deal_one()
   var card2 = deck.deal_one()
   var card3 = deck.deal_one()
   var card4 = deck.deal_one()
+  var card5 = deck.deal_one()
   $message("Deck length" + deck.size())
   
   
@@ -704,10 +762,14 @@ function main() {
   var card4 = new Card.Card('c', 'K')
   var card5 = new Card.Card('h', 'Q') */
   
+  $message("Card 4" + card4.toString())
+  $message("Card 5" + card5.toString())
+  
   card.move(300, 20)
   card2.move(360, 30)
   card3.move(300, 240)
   card4.move(360, 250)
+  card5.move(420, 270)
   
   /*
   card.update()
