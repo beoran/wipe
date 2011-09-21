@@ -155,13 +155,21 @@ function $wrapevent(obj, fn) {
   return res
 }
 
-/** Installs event handler, and returns it. Returned value must be stored for 
-use with $noevent */
-function $event(obj, evt, fn) {
+/** Public. Installs event handler, and returns it.
+
+obj  - Object to install event handler on.
+evt  - String name of the event to handle without "on" prepended.
+fn   - Function to install as event handler.
+self - Optional. Context to which the this of the fn will be set on call.
+       If absent, obj will be used.
+
+Returns the installed event handler, which is NOT fn, but a wrapper function 
+around fn. The return value must be stored for use with $noevent. */
+function $event(obj, evt, fn, self) {
   // Wrapper that ensures fn is called with the event and 
   // with the object as this
   var myfn = fn
-  var wrap = $wrapevent(obj, fn)
+  var wrap = self ? $wrapevent(self, fn) : $wrapevent(obj, fn)
   if (obj.addEventListener) obj.addEventListener(evt, wrap, false)
   else if (obj.attachEvent) obj.attachEvent('on'+evt,fn)
   return wrap
@@ -537,7 +545,33 @@ Card.Card.prototype  = {
 
 stack = new Card.Stack(0, 0)
 
-
+/*
+Keyboard handler:
+window.addEventListener("keydown", function(e) {
+    var body = document.getElementsByTagName("body")[0]
+    body.innerHTML =  'kc: ' + e.keyCode
+    body.innerHTML += ', kk: '+ String.fromCharCode(e.keyCode)
+    body.innerHTML += ', cc: ' + e.charCode          
+    body.innerHTML += ', alt: ' + (e.altKey ? 'y' : 'n')
+    body.innerHTML += ', ctrl: ' + (e.ctrlKey ? 'y' : 'n')
+    body.innerHTML += ', shift: ' + (e.shiftKey ? 'y' : 'n')     
+    body.innerHTML += ', meta: ' + (e.metaKey ? 'y' : 'n')     
+    
+    var found = 'none'
+    for (var i in e) {
+        if ((e[i] == e.keyCode) && (i.match(/DOM_VK/)))  {
+            found = i
+        }        
+    }            
+    body.innerHTML += ', found: ' + found
+    body.innerHTML += "<br><br>"
+    var x = []    
+    for (var i in e) x.push(i)
+    body.innerHTML += x.join("<br>")
+    
+    e.preventDefault()
+}, false)
+*/
 
 
 function main() {
