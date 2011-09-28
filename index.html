@@ -1,6 +1,9 @@
 <!DOCTYPE HTML>
 <html>
 <head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!-- put both just to be sure -->
 <style>
 body { 
   font-family: monospace;
@@ -29,10 +32,11 @@ body {
                 -o-linear-gradient(45deg, transparent 75%, #555 75%),
                   -o-linear-gradient(-45deg, transparent 75%, #555 75%);
       */
-      background-image: linear-gradient(45deg, #555 25%, transparent 25%, transparent),
-                linear-gradient(-45deg, #555 25%, transparent 25%, transparent),
-                linear-gradient(45deg, transparent 75%, #555 75%),
-                  linear-gradient(-45deg, transparent 75%, #555 75%);
+      background-image: 
+        linear-gradient(45deg, #555 25%, transparent 25%, transparent),
+        linear-gradient(-45deg, #555 25%, transparent 25%, transparent),
+        linear-gradient(45deg, transparent 75%, #555 75%),
+        linear-gradient(-45deg, transparent 75%, #555 75%);
 }
 
 .card {  
@@ -122,6 +126,29 @@ body {
 
 </style>
 <script>
+
+/** Predicted needed software components:
+ 1) HTML/javascript helpers
+ 2) Card
+ 3) Deck
+ 4) Place
+ 5) Hand
+ 6) Stack
+ 7) Table
+ 8) Player
+ 9) Human
+10) AI
+11) Game
+12) UI
+13) Pot
+14) Build
+
+Prediction:
+14 components, around 100-200 sloc each, estimate 14 * 200 = 2800 lines.
+now, 1027 lines.
+
+*/
+
 
 /** Shorthand for document.getElementById */
 function $id(id) {
@@ -411,6 +438,30 @@ Card.SUIT_UTF8[Card.SUIT_DIAMONDS]= '♦'
 Card.SUIT_UTF8[Card.SUIT_CLUBS]   = '♣'
 Card.SUIT_UTF8[Card.SUIT_SPADES]  = '♠'
 
+/** Sorting order of suits.*/
+Card.SUIT_ORDER = {}
+Card.SUIT_ORDER[Card.SUIT_HEARTS]  = 4
+Card.SUIT_ORDER[Card.SUIT_DIAMONDS]= 3
+Card.SUIT_ORDER[Card.SUIT_CLUBS]   = 2
+Card.SUIT_ORDER[Card.SUIT_SPADES]  = 1
+
+/** Sorting order of ranks. */
+Card.RANK_ORDER = {}
+Card.RANK_ORDER[Card.RANK_ACE]    = 13
+Card.RANK_ORDER[Card.RANK_2]      = 12
+Card.RANK_ORDER[Card.RANK_3]      = 11
+Card.RANK_ORDER[Card.RANK_4]      = 10
+Card.RANK_ORDER[Card.RANK_5]      =  9
+Card.RANK_ORDER[Card.RANK_6]      =  8
+Card.RANK_ORDER[Card.RANK_7]      =  7
+Card.RANK_ORDER[Card.RANK_8]      =  6
+Card.RANK_ORDER[Card.RANK_9]      =  5
+Card.RANK_ORDER[Card.RANK_10]     =  4
+Card.RANK_ORDER[Card.RANK_JACK]   =  3
+Card.RANK_ORDER[Card.RANK_QUEEN]  =  2
+Card.RANK_ORDER[Card.RANK_KING]   =  1
+
+
 
 /** Makes an id for a given rank and suit. */
 Card.make_id = function (suit, rank) {
@@ -427,6 +478,36 @@ Card.short_name = function (suit, rank) {
 Card.random = function (low, high) {
   return Math.floor(Math.random() * (high - low)) + low
 }
+
+/** Compares 2 cards by the given function property getter name*/
+Card.compare_by = function(card1, card2, getter) {
+  var v1 = card1[getter].call() 
+  var v2 = card2[getter].call()
+  if (v1 == v2) return 0;
+  return (v1 < v2) ? -1 : 1;
+}
+
+
+/** Compares 2 cards for rank only */
+Card.compare_rank = function(card1, card2) {
+  return Card.compare_by(card1, card2, "rank_value")
+}
+
+/** Compares 2 cards for suit only */
+Card.compare_rank = function(card1, card2) {
+  return Card.compare_by(card1, card2, "suit_value")
+}
+
+/** Compares 2 cards for rank and suit */
+Card.compare_ranksuit = function(card1, card2) {
+  return Card.compare_by(card1, card2, "ranksuit_value")
+}
+
+/** Compares 2 cards for suit and rank */
+Card.compare_ranksuit = function(card1, card2) {
+  return Card.compare_by(card1, card2, "suitrank_value")
+}
+
 
 /** A place can contain one or more cards. */
 Card.Place = function(x, y) {
@@ -461,7 +542,12 @@ PlaceProto.insert = function(index, card) {
   card.z(index)
   return card
 }
-  
+
+/** Sorts a place by rank and suit. */
+PlaceProto.sort_ranksuit = function() {
+  this._cards.sort(Card.compare_ranksuit)
+}
+
 /** Shifts a card from one position to the next in the Place. */
 PlaceProto.shift = function(from, to) {
   card = this.remove(from)
@@ -582,7 +668,23 @@ Card.Card = function(suit, rank) {
   this.update()
 }
 
-CardProto = Card.Card.prototype
+var CardProto = Card.Card.prototype
+
+CardProto.rank_value = function() {
+  return Card.RANK_ORDER[this._rank]
+}
+
+CardProto.suit_value = function() {
+  return Card.SUIT_ORDER[this._rank]
+}
+
+CardProto.ranksuit_value = function() {
+  return (this.suit_value() * 100) + (this.rank_value)
+}
+
+CardProto.suitrank_value = function() {
+  return (this.suit_value()) + (this.rank_value * 100)
+}
 
 CardProto.style = function () {
     return this.div().style
@@ -765,9 +867,11 @@ CardProto.div = function() {
   return this._div
 }
   
-CardProto.move = function (x, y) {
+CardProto.xy = function (x, y) {
   $move(this.div(), x, y)
 }
+
+
 
 
 stack = new Card.Stack(0, 0)
@@ -879,11 +983,11 @@ function main() {
   $message("Card 4" + card4.toString())
   $message("Card 5" + card5.toString())
   
-  card.move(300, 20)
-  card2.move(360, 30)
-  card3.move(300, 240)
-  card4.move(360, 250)
-  card5.move(420, 270)
+  card.xy(300, 20)
+  card2.xy(360, 30)
+  card3.xy(300, 240)
+  card4.xy(360, 250)
+  card5.xy(420, 270)
   
   /*
   card.update()
