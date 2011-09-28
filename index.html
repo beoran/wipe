@@ -7,6 +7,34 @@ body {
   background-color: green;
 }
 
+.checkered {
+/*      background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(.25, #555), color-stop(.25, transparent), to(transparent)),
+                -webkit-gradient(linear, 0 100%, 100% 0, color-stop(.25, #555), color-stop(.25, transparent), to(transparent)),
+                -webkit-gradient(linear, 0 0, 100% 100%, color-stop(.75, transparent), color-stop(.75, #555)),
+                -webkit-gradient(linear, 0 100%, 100% 0, color-stop(.75, transparent), color-stop(.75, #555));
+      background-image: -webkit-linear-gradient(45deg, #555 25%, transparent 25%, transparent),
+                -webkit-linear-gradient(-45deg, #555 25%, transparent 25%, transparent),
+                -webkit-linear-gradient(45deg, transparent 75%, #555 75%),
+                  -webkit-linear-gradient(-45deg, transparent 75%, #555 75%);
+      background-image: -moz-linear-gradient(45deg, #555 25%, transparent 25%, transparent),
+                -moz-linear-gradient(-45deg, #555 25%, transparent 25%, transparent),
+                -moz-linear-gradient(45deg, transparent 75%, #555 75%),
+                  -moz-linear-gradient(-45deg, transparent 75%, #555 75%);
+      background-image: -ms-linear-gradient(45deg, #555 25%, transparent 25%, transparent),
+                -ms-linear-gradient(-45deg, #555 25%, transparent 25%, transparent),
+                -ms-linear-gradient(45deg, transparent 75%, #555 75%),
+                  -ms-linear-gradient(-45deg, transparent 75%, #555 75%);
+      background-image: -o-linear-gradient(45deg, #555 25%, transparent 25%, transparent),
+                -o-linear-gradient(-45deg, #555 25%, transparent 25%, transparent),
+                -o-linear-gradient(45deg, transparent 75%, #555 75%),
+                  -o-linear-gradient(-45deg, transparent 75%, #555 75%);
+      */
+      background-image: linear-gradient(45deg, #555 25%, transparent 25%, transparent),
+                linear-gradient(-45deg, #555 25%, transparent 25%, transparent),
+                linear-gradient(45deg, transparent 75%, #555 75%),
+                  linear-gradient(-45deg, transparent 75%, #555 75%);
+}
+
 .card {  
   font-size: 200%;
   position: absolute;
@@ -412,55 +440,64 @@ function $def(obj, name, func) {
   obj.prototype[name] = func
 }
 
-Card.Place.prototype = {
-  add : function(card) {
-    this._cards.push(card)
-  },
-  
-  /** Removes a card at the given position from the Place and returns it. */
-  remove : function(index) {
-    cards = this._cards.splice(index, 1)
-    card  = cards[0]
-    card.z(-1)
-    return card
-  },
-  
-  /** Inserts a card to the Place at the given position and returns it. */
-  insert : function(index, card) {
-    this._cards.splice(index, 0, card)
-    card.z(index)
-    return card
-  },
-  
-  /** Shifts a card from one position to the next in the Place. */
-  shift : function(from, to) {
-    card = this.remove(from)
-    return this.insert(to, card)
-  },
-  
-  /** Moves a card from this place's indx from to the other place's index to */
-  move : function(from, other, to) {
-    card = this.remove(from)
-    other.insert(to, card)
-  },
-  
-  /** Amount of cards in this Place*/
-  size : function() {
-    return this._cards.length
-  },
-  
-  toString : function() {
-    res = '['
-    for (i in this._cards) {
-      card = this._cards[i]
-      res += card.short_name()
-      res += ", "
-    }
-    res += "]"
-    return res
-  }
 
+PlaceProto = Card.Place.prototype  
+
+PlaceProto.add  = function(card) {
+  this._cards.push(card)
 }
+  
+/** Removes a card at the given position from the Place and returns it. */
+PlaceProto.remove = function(index) {
+  cards = this._cards.splice(index, 1)
+  card  = cards[0]
+  card.z(-1)
+  return card
+}
+  
+/** Inserts a card to the Place at the given position and returns it. */
+PlaceProto.insert = function(index, card) {
+  this._cards.splice(index, 0, card)
+  card.z(index)
+  return card
+}
+  
+/** Shifts a card from one position to the next in the Place. */
+PlaceProto.shift = function(from, to) {
+  card = this.remove(from)
+  return this.insert(to, card)
+}
+  
+/** Moves a card from this place's indx from to the other place's index to */
+PlaceProto.move = function(from, other, to) {
+  card = this.remove(from)
+  other.insert(to, card)
+}
+  
+/** Amount of cards in this Place*/
+PlaceProto.size = function() {
+  return this._cards.length
+}
+  
+PlaceProto.toString = function() {
+  res = '['
+  for (i in this._cards) {
+    card = this._cards[i]
+    res += card.short_name()
+    res += ", "
+  }
+  res += "]"
+  return res
+}
+
+
+/** A hand is a set of cards that players holds in their hands. */
+Card.Hand = function(hide) {
+  Card.Place.call(this) // call parent constructor
+  this.hide = hide
+}
+
+var HandProto = $inherit(Card.Hand, Card.Place) 
 
 
 
@@ -482,9 +519,9 @@ Card.Deck = function() {
 }
 
 // prototype based inheritance
-$inherit(Card.Deck, Card.Place)
+var DeckProto = $inherit(Card.Deck, Card.Place)
 
-var DeckProto = Card.Deck.prototype
+// Card.Deck.prototype
 
 /** Looks up a card in this deck by it's id. */
 DeckProto.lookup_id = function(id) {
@@ -545,172 +582,193 @@ Card.Card = function(suit, rank) {
   this.update()
 }
 
-Card.Card.prototype  = {
+CardProto = Card.Card.prototype
 
-  style : function () {
+CardProto.style = function () {
     return this.div().style
-  },
-
-  z : function() {
-    if(arguments.length > 0 ) { 
-      zindex = parseInt(arguments[0])
-      this.style().zIndex = zindex
-    }
-    return this.style().zIndex
-  },
-
-  name : function()  {
-    return this.rank_name() + ' of ' + this.suit_name()
-  },
-  
-  short_name : function() { 
-    return Card.short_name(this._suit, this._rank);
-  },
-  
-  rank_name : function()  {
-    return Card.RANK_NAMES[this._rank]
-  },
-
-  suit_name : function()  {
-    return Card.SUIT_NAMES[this._suit]
-  },
-
-  make : function (suit, rank) {
-  },
-
-  select : function() {
-    $message("Selected  " + this.name())
-    this._sel = true
-    this.update()
-  },
-  
-  unselect : function() {
-    $message("Unselected  " + this.name())
-    this._sel = false
-    this.update()
-  },
-  
-  toggle_select : function() {
-    if(this._sel) {
-      return this.unselect();
-    } else {
-      return this.select();
-    }
-  },
-  
-  
-  html_suit : function () {
-    return Card.HTML_SUIT[this._suit]
-  },
-  
-  html_id : function() {
-    return Card.make_id(this._suit, this._rank)
-  },
-  
-  html_index : function() {
-    return this._rank + '<br>' + this.html_suit()
-  },
-  
-  html_index_2 : function() {
-    return this.html_suit() + '<br>' + this._rank
-  },
-  
-  html_color_class : function() { 
-    return Card.SUIT_COLOR[this._suit]
-  },
-  
-  html_class : function() {
-    var show  = this._show ? 'card_front' : 'card_back'
-    var sele  = this._sel  ? 'card_sel'   : 'card_nosel'
-    var color = this.html_color_class()
-    return  'card ' + color + ' ' + show + ' ' + sele
-  },
-  
-  make_spot : function(div, rc, inner) {
-    var pdiv = $spawn(div, 'div')
-    pdiv.setAttribute('class', 'spot_' + rc)
-    pdiv.innerHTML = inner;
-  },
-  
-  make_spots : function(div, list, inner) { 
-    for(var index in list) {
-      this.make_spot(div, list[index], inner);
-    }
-  },
-  
-  make_all_spots : function(div) {
-    var suit = this.html_suit();
-    switch(this._rank) {
-      case Card.RANK_ACE:
-        return this.make_spots(div, ['middle'], suit)
-      case Card.RANK_2:
-        return this.make_spots(div, ['b2', 'b4'], suit)
-      case Card.RANK_3:
-        return this.make_spots(div, ['b1', 'b3', 'b5'], suit)
-      case Card.RANK_4:
-        return this.make_spots(div, ['a2', 'c2', 'a4', 'c4'], suit)
-      case Card.RANK_5:
-        return this.make_spots(div, ['a2', 'c2', 'a4', 'c4', 'b3'], suit)
-      case Card.RANK_6:
-        return this.make_spots(div, ['a1', 'a3', 'a5', 'c1', 'c3', 'c5'], suit)
-      case Card.RANK_7:
-        return this.make_spots(div, ['a1', 'a3', 'a5', 'c1', 'c3', 'c5', 'b2'], suit)
-      case Card.RANK_8:
-        return this.make_spots(div, ['a1', 'a3', 'a5', 'c1', 'c3', 'c5', 'b2', 'b4'], suit)
-      case Card.RANK_9:
-        return this.make_spots(div, ['a1', 'a2', 'a4', 'a5', 'c1', 'c2', 'c4', 'c5', 'b2'], suit)
-      case Card.RANK_10:
-        return this.make_spots(div, ['a1', 'a2', 'a4', 'a5', 'c1', 'c2', 'c4', 'c5', 'b2', 'b4'], suit)
-      case Card.RANK_JACK:
-        return this.make_spots(div, ['b2'], '&#9821;<br>J')
-      case Card.RANK_QUEEN:
-        return this.make_spots(div, ['b2'], '&#x265b;<br>Q')
-      case Card.RANK_KING:
-        return this.make_spots(div, ['b2'], '&#x265a;<br>K')
-      default:
-        return null
-    }
-  },
-  
-  on_click : function(e) {
-    this.toggle_select()
-  },
-  
-  make_div : function() {
-    var field = $id('field')
-    var cdiv  = $spawn(field, 'div')
-    cdiv.setAttribute('id', this.html_id())
-    cdiv.setAttribute('class', this.html_class())
-    i1 = $spawn(cdiv, 'div')
-    i1.innerHTML = this.html_index()
-    i1.setAttribute('class', 'card_index')
-    i2 = $spawn(cdiv, 'div')
-    i2.innerHTML =  this.html_index_2()
-    i2.setAttribute('class', 'card_index_2')
-    this.make_all_spots(cdiv)
-    // install event hanedler with this as context.
-    this.click_fn = $event(cdiv, 'click', Card.Card.prototype. on_click, this)
-    return cdiv
-  },
-  
-  update : function() {
-    if (!this._div)  this._div = this.make_div()
-    // Also update html class which may change due to _shown changing
-    this._div.setAttribute('class', this.html_class())
-  },
-  
-  div : function() {    
-    if (this._div) return this._div    
-    this._div = this.make_div()
-    this.update()
-    return this._div
-  },
-  
-  move : function (x, y) {
-    $move(this.div(), x, y)
-  }
-  
 }
+
+CardProto.z = function() {
+  if(arguments.length > 0 ) { 
+    zindex = parseInt(arguments[0])
+    this.style().zIndex = zindex
+  }
+  return this.style().zIndex
+}
+
+CardProto.name  = function() {
+  return this.rank_name() + ' of ' + this.suit_name()
+}
+  
+CardProto.short_name = function() { 
+  return Card.short_name(this._suit, this._rank);
+}
+  
+  CardProto.rank_name = function()  {
+    return Card.RANK_NAMES[this._rank]
+  }
+
+CardProto.suit_name = function()  {
+  return Card.SUIT_NAMES[this._suit]
+}
+
+CardProto.make = function (suit, rank) {
+}
+
+CardProto.hide = function() {
+  $message("Hidden  " + this.name())
+  this._show = false
+  this.update()
+}
+  
+CardProto.show = function() {
+  $message("Shown  " + this.name())
+  this._show = true  
+  this.update()
+}
+  
+CardProto.toggle_show = function() {
+  if(this._show) {
+    return this.hide();
+  } else {
+    return this.show();
+  }
+}
+  
+
+CardProto.select = function() {
+  $message("Selected  " + this.name())
+  this._sel = true
+  this.update()
+}
+  
+CardProto.unselect = function() {
+  $message("Unselected  " + this.name())
+  this._sel = false
+  this.update()
+}
+  
+CardProto.toggle_select = function() {
+  if(this._sel) {
+    return this.unselect();
+  } else {
+    return this.select();
+  }
+}
+  
+  
+CardProto.html_suit = function () {
+  return Card.HTML_SUIT[this._suit]
+}
+  
+CardProto.html_id = function() {
+  return Card.make_id(this._suit, this._rank)
+}
+  
+CardProto.html_index = function() {
+  return this._rank + '<br>' + this.html_suit()
+}
+  
+CardProto.html_index_2 = function() {
+    return this.html_suit() + '<br>' + this._rank
+}
+  
+CardProto.html_color_class = function() { 
+    return Card.SUIT_COLOR[this._suit]
+}
+  
+CardProto.html_class = function() {
+  var show  = this._show ? 'card_front' : 'card_back'
+  var sele  = this._sel  ? 'card_sel'   : 'card_nosel'
+  var color = this.html_color_class()
+  return  'card ' + color + ' ' + show + ' ' + sele
+}
+  
+CardProto.make_spot = function(div, rc, inner) {
+  var pdiv = $spawn(div, 'div')
+  pdiv.setAttribute('class', 'spot_' + rc)
+  pdiv.innerHTML = inner;
+}
+  
+CardProto.make_spots = function(div, list, inner) { 
+  for(var index in list) {
+    this.make_spot(div, list[index], inner);
+  }
+}
+  
+CardProto.make_all_spots = function(div) {
+  var suit = this.html_suit();
+  switch(this._rank) {
+    case Card.RANK_ACE:
+      return this.make_spots(div, ['middle'], suit)
+    case Card.RANK_2:
+      return this.make_spots(div, ['b2', 'b4'], suit)
+    case Card.RANK_3:
+      return this.make_spots(div, ['b1', 'b3', 'b5'], suit)
+    case Card.RANK_4:
+      return this.make_spots(div, ['a2', 'c2', 'a4', 'c4'], suit)
+    case Card.RANK_5:
+      return this.make_spots(div, ['a2', 'c2', 'a4', 'c4', 'b3'], suit)
+    case Card.RANK_6:
+      return this.make_spots(div, ['a1', 'a3', 'a5', 'c1', 'c3', 'c5'], suit)
+    case Card.RANK_7:
+      return this.make_spots(div, ['a1', 'a3', 'a5', 'c1', 'c3', 'c5', 'b2'], suit)
+    case Card.RANK_8:
+      return this.make_spots(div, ['a1', 'a3', 'a5', 'c1', 'c3', 'c5', 'b2', 'b4'], suit)
+    case Card.RANK_9:
+      return this.make_spots(div, ['a1', 'a2', 'a4', 'a5', 'c1', 'c2', 'c4', 'c5', 'b2'], suit)
+    case Card.RANK_10:
+      return this.make_spots(div, ['a1', 'a2', 'a4', 'a5', 'c1', 'c2', 'c4', 'c5', 'b2', 'b4'], suit)
+    case Card.RANK_JACK:
+      return this.make_spots(div, ['b2'], '&#9821;<br>J')
+    case Card.RANK_QUEEN:
+      return this.make_spots(div, ['b2'], '&#x265b;<br>Q')
+    case Card.RANK_KING:
+      return this.make_spots(div, ['b2'], '&#x265a;<br>K')
+    default:
+      return null
+  }
+}
+  
+CardProto.on_click = function(e) {
+  this.toggle_select()
+  this.toggle_show()
+}
+  
+CardProto.make_div = function() {
+  var field = $id('field')
+  var cdiv  = $spawn(field, 'div')
+  cdiv.setAttribute('id', this.html_id())
+  cdiv.setAttribute('class', this.html_class())
+  i1 = $spawn(cdiv, 'div')
+  i1.innerHTML = this.html_index()
+  i1.setAttribute('class', 'card_index')
+  i2 = $spawn(cdiv, 'div')
+  i2.innerHTML =  this.html_index_2()
+  i2.setAttribute('class', 'card_index_2')
+  this.make_all_spots(cdiv)
+  // install event hanedler with this as context.
+  this.click_fn = $event(cdiv, 'click', Card.Card.prototype. on_click, this)
+  return cdiv
+}
+  
+CardProto.update = function() {
+  if (!this._div)  this._div = this.make_div()
+  // Also update html class which may change due to _shown changing
+  this._div.setAttribute('class', this.html_class())
+}
+  
+CardProto.div = function() {    
+  if (this._div) return this._div    
+  this._div = this.make_div()
+  this.update()
+  return this._div
+}
+  
+CardProto.move = function (x, y) {
+  $move(this.div(), x, y)
+}
+
 
 stack = new Card.Stack(0, 0)
 
@@ -741,6 +799,62 @@ window.addEventListener("keydown", function(e) {
     e.preventDefault()
 }, false)
 */
+
+/** Specifics of the Wipe game. */
+Wipe = {}
+
+/** The "pot" are all cards on the table that are still avaliable 
+for builds or for taking. */
+Wipe.Pot = function() {
+  Card.Place.call(this) // call parent constructor
+}
+
+var PotProto = $inherit(Wipe.Pot, Card.Place)
+
+
+/** A "build" is a set of cards on the table that form a build. */
+Wipe.Build = function() {
+  Card.Place.call(this) // call parent constructor
+  args = $argarray(arguments)
+  this.target = args.shift()
+  this.type   = args.shift()
+  // cards are
+  card        = args.shift() 
+  while(card) {
+    this.add(card)
+    card        = args.shift()
+  }
+}
+
+var BuildProto = $inherit(Wipe.Build, Card.Place)
+
+/** 
+The table. In the "wipe" game, the table has a "pot" of cards, and 
+any number of builds. Pracically, though the builds are limited,
+and there will never be more than 4 or even 2 builds per player.
+Since wipe is at most a 6 player game, there can be at most 24,
+but practically speaking 12 builds.
+*/
+Wipe.Table = function() {
+  this.pot    = new Wipe.Pot()
+  this.builds = []
+}
+
+var TableProto = Wipe.Table.prototype
+
+
+/** A player. May be human or AI. Players havea hand and a 
+stack of collected cards. */
+
+/** All components of the whole Wipe game*/
+Wipe.Game = function() {
+  this.deck       = new Card.Deck();
+  this.deck.shuffle();
+  this.table      = new Wipe.Table();
+  this.players    = [] 
+  this.players[0] = new Wipe.Human();
+  this.players[1] = new Wipe.Ai();
+}
 
 
 function main() {
