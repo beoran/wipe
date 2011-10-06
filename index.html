@@ -485,8 +485,8 @@ Card.compare_ranksuit = function(card1, card2) {
 
 /** A place can contain one or more cards. */
 Card.Place = function(x, y) {
-  this._x     = x
-  this._y     = y
+  this._x     = x || 0
+  this._y     = y || 0
   this._cards = []
 }
 
@@ -496,17 +496,29 @@ function $def(obj, name, func) {
 }
 
 
-PlaceProto = Card.Place.prototype  
-
+var PlaceProto = Card.Place.prototype
+  
+/** Adds a card to this place. */
 PlaceProto.add  = function(card) {
   this._cards.push(card)
 }
+
+/** Sets the x and y position of this place. Layout() will be called
+to update the layout the cards. */
+PlaceProto.xy = function (x, y) {
+  this._x = x || 0
+  this._y = y || 0
+  this.layout()
+}
+
+
   
 /** Removes a card at the given position from the Place and returns it. */
 PlaceProto.remove = function(index) {
-  cards = this._cards.splice(index, 1)
-  card  = cards[0]
+  var cards = this._cards.splice(index, 1)
+  var card  = cards[0]
   card.z(-1)
+  this.layout()
   return card
 }
   
@@ -514,24 +526,43 @@ PlaceProto.remove = function(index) {
 PlaceProto.insert = function(index, card) {
   this._cards.splice(index, 0, card)
   card.z(index)
+  this.layout()
   return card
 }
+
+/** This method is called every time this._cards changes, or when xy() is called. 
+Override this method to change the physical lay-out of cards.
+By default, the cards are layed out as as stack one over the other.
+*/
+PlaceProto.layout = function() {
+  for (index = 0; index < this._cards.length ; index ++) {
+    card = this._cards[index]
+    card.xy(this._x, this._y)
+    card.z(index)
+  }
+}
+
 
 /** Sorts a place by rank and suit. */
 PlaceProto.sort_ranksuit = function() {
   this._cards.sort(Card.compare_ranksuit)
+  this.layout()
 }
 
 /** Shifts a card from one position to the next in the Place. */
 PlaceProto.shift = function(from, to) {
-  card = this.remove(from)
-  return this.insert(to, card)
+  var card = this.remove(from)
+  var res  = this.insert(to, card)
+  this.layout()
+  return res
 }
   
-/** Moves a card from this place's indx from to the other place's index to */
+/** Moves a card from this place's index from to the other place's index to */
 PlaceProto.move = function(from, other, to) {
-  card = this.remove(from)
-  other.insert(to, card)
+  var card = this.remove(from)
+  var res  = other.insert(to, card)
+  this.layout()
+  return res
 }
   
 /** Amount of cards in this Place*/
@@ -552,8 +583,8 @@ PlaceProto.toString = function() {
 
 
 /** A hand is a set of cards that players holds in their hands. */
-Card.Hand = function(hide) {
-  Card.Place.call(this) // call parent constructor
+Card.Hand = function(x, y, hide) {
+  Card.Place.call(this, x, y) // call parent constructor
   this.hide = hide
 }
 
@@ -563,9 +594,8 @@ var HandProto = $inherit(Card.Hand, Card.Place)
 
 /** A deck of cards contains all ranks for every suit once. It's also useable 
 as the a stock pile. */
-Card.Deck = function() {
-  Card.Place.call(this) // call parent constructor
-  // this._cards   = []
+Card.Deck = function(x, y) {
+  Card.Place.call(this, x, y) // call parent constructor  
   this._lookup  = {}
   for (rank in Card.RANKS) {
     for (suit in Card.SUITS) {
@@ -574,8 +604,7 @@ Card.Deck = function() {
       this.add(card)
       this._lookup[card.html_id()] = card
     } 
-  }  
-  // this.shuffle()
+  }
 }
 
 // prototype based inheritance
@@ -590,10 +619,10 @@ DeckProto.lookup_id = function(id) {
   
 /** Looks up a card in the card index by it's suit and rank. */
 DeckProto.lookup = function(suit, rank) {
-    id  = Card.make_id(suit, rank)    
-    res = this.lookup_id(id)
-    $message("Fetching card with id: " + id)
-    return res
+  id  = Card.make_id(suit, rank)
+  res = this.lookup_id(id)
+  $message("Fetching card with id: " + id)
+  return res
 }
   
 /** Deals a single cards from the top of this deck and returns it.
@@ -627,7 +656,7 @@ Card.Stack = function(x, y) {
 $inherit(Card.Stack, Card.Place)
 
 Card.Hand = function(x, y, show) {
-  this.constructor.call(this, x, y)
+  Card.Place.call(this, x , y) // call parent constructor
   this._show  = show
 }
 
@@ -842,8 +871,11 @@ CardProto.div = function() {
 }
   
 CardProto.xy = function (x, y) {
+  // $message("Moved  " + this.short_name() + " to " + x + "," + y)
   $move(this.div(), x, y)
 }
+
+CardProto.toString = CardProto.short_name
 
 
 
@@ -921,8 +953,33 @@ Wipe.Table = function() {
 var TableProto = Wipe.Table.prototype
 
 
-/** A player. May be human or AI. Players havea hand and a 
+/** A player. May be human or AI. Players have a hand and a 
 stack of collected cards. */
+Wipe.Player = function(name, x, y) {
+  this._name = name
+  this._hand = new Card.Hand(x, y)
+  this._pile = new Card.Stack(x + 200, y) 
+}
+
+/** AI constructor */
+Wipe.Ai = function(name, x, y) {
+  Wipe.Player.call(this, name, x, y) // call parent constructor  
+}
+
+/** Human constructor */
+Wipe.Human = function(name, x, y) {
+  Wipe.Player.call(this, name, x, y) // call parent constructor  
+}
+
+/** Prototype for the player's methods. */
+var PlayerProto = Wipe.Player.prototype
+
+/** Inherit prototype for the human player's methods. */ 
+var HumanProto  = $inherit(Wipe.Human, Wipe.Player)
+
+/** Inherit prototype for the AI player's methods. */
+var AiProto     = $inherit(Wipe.Ai, Wipe.Player)
+
 
 /** All components of the whole Wipe game*/
 Wipe.Game = function() {
@@ -930,13 +987,26 @@ Wipe.Game = function() {
   this.deck.shuffle();
   this.table      = new Wipe.Table();
   this.players    = [] 
-  this.players[0] = new Wipe.Human();
-  this.players[1] = new Wipe.Ai();
+  this.players[0] = new Wipe.Human("Player", 200, 210);
+  this.players[1] = new Wipe.Ai("Computer", 200, 10);
+  this.human      = this.players[0]
+  this.ai         = this.players[1]
 }
+
+/** Prototype for the game's methods. */
+var GameProto = Wipe.Game.prototype
+
 
 
 function main() {
-  var deck  = new Card.Deck() 
+  var game  = new Wipe.Game()
+  var card  = game.deck.deal_one()
+  $message("Card Dealt: " + card.toString())
+  card.toggle_select()
+  game.human._hand.add(card)
+  
+  
+  /*var deck  = new Card.Deck() 
   $message(deck.toString())
   $message("Deck length" + deck.size())
   deck.shuffle()
@@ -945,7 +1015,7 @@ function main() {
   var card3 = deck.deal_one()
   var card4 = deck.deal_one()
   var card5 = deck.deal_one()
-  $message("Deck length" + deck.size())
+  $message("Deck length" + deck.size())*/
   
   
   /* var card  = new Card.Card('h', 'A')
@@ -954,14 +1024,15 @@ function main() {
   var card4 = new Card.Card('c', 'K')
   var card5 = new Card.Card('h', 'Q') */
   
-  $message("Card 4" + card4.toString())
+  /*$message("Card 4" + card4.toString())
   $message("Card 5" + card5.toString())
   
   card.xy(300, 20)
   card2.xy(360, 30)
   card3.xy(300, 240)
   card4.xy(360, 250)
-  card5.xy(420, 270)
+  card5.xy(420, 270)*/
+  game.deck.xy(100, 200)
   
   /*
   card.update()
