@@ -488,6 +488,7 @@ Card.Place = function(x, y) {
   this._x     = x || 0
   this._y     = y || 0
   this._cards = []
+  this.layout()
 }
 
 /** adds a function to an object's prototype */
@@ -501,6 +502,7 @@ var PlaceProto = Card.Place.prototype
 /** Adds a card to this place. */
 PlaceProto.add  = function(card) {
   this._cards.push(card)
+  this.layout()
 }
 
 /** Sets the x and y position of this place. Layout() will be called
@@ -534,7 +536,7 @@ PlaceProto.insert = function(index, card) {
 Override this method to change the physical lay-out of cards.
 By default, the cards are layed out as as stack one over the other.
 */
-PlaceProto.layout = function() {
+PlaceProto.layout = function() {  
   for (index = 0; index < this._cards.length ; index ++) {
     card = this._cards[index]
     card.xy(this._x, this._y)
@@ -585,10 +587,30 @@ PlaceProto.toString = function() {
 /** A hand is a set of cards that players holds in their hands. */
 Card.Hand = function(x, y, hide) {
   Card.Place.call(this, x, y) // call parent constructor
-  this.hide = hide
+  this.hide   = hide
 }
 
-var HandProto = $inherit(Card.Hand, Card.Place) 
+var HandProto = $inherit(Card.Hand, Card.Place)
+// var HandProto = Card.Hand.prototype
+ 
+
+/** This method is called every time this._cards changes, or when xy() is called. 
+Override this method to change the physical lay-out of cards.
+By default, the cards are layed out as as stack one over the other.
+*/
+HandProto.layout = function() {
+  $message("Hand Layout!")
+  for (index = 0; index < this._cards.length ; index ++) {
+    card = this._cards[index]
+    card.xy(this._x, this._y + (index * 30))
+    card.z(index)
+    if(this.hide) { 
+      card.hide 
+    } else {
+      card.show
+    }
+  }
+}
 
 
 
@@ -600,7 +622,7 @@ Card.Deck = function(x, y) {
   for (rank in Card.RANKS) {
     for (suit in Card.SUITS) {
       card = new Card.Card(Card.SUITS[suit], Card.RANKS[rank])
-      $message("New card: " + card.name())
+      // $message("New card: " + card.name())
       this.add(card)
       this._lookup[card.html_id()] = card
     } 
@@ -619,8 +641,8 @@ DeckProto.lookup_id = function(id) {
   
 /** Looks up a card in the card index by it's suit and rank. */
 DeckProto.lookup = function(suit, rank) {
-  id  = Card.make_id(suit, rank)
-  res = this.lookup_id(id)
+  var id  = Card.make_id(suit, rank)
+  var res = this.lookup_id(id)
   $message("Fetching card with id: " + id)
   return res
 }
@@ -629,15 +651,43 @@ DeckProto.lookup = function(suit, rank) {
 * The card is removed from the deck (though not from the card index)
 */
 DeckProto.deal_one = function() {
-    card = this.remove(0)
+    var card = this.remove(0)
     return card
 }
+
+/** Deals a single card from the top of this deck to the given place and 
+* returns the card dealt. The card is removed from the deck 
+* (though not from the card index), and added to the place using .add
+*/
+DeckProto.deal_one_to = function(place) {
+  var card = this.deal_one()
+  if(!card) { return null }
+  place.add(card)
+  return card
+}
+
+/** Deals cards from the top of this deck to the given place and 
+* returns the cards dealt as an array. The cards are removed from the deck 
+* (though not from the card index), and added to the place using .add
+*/
+DeckProto.deal_to = function(place, amount) {
+  amount    = amount || 1
+  var cards = []
+  for(var index = 0; index < amount; index++) {
+    var card = this.deal_one_to(place)
+    cards.push(card)
+  }
+  return cards
+}
+
+
+
   
 /** Shuffles the deck. */
 DeckProto.shuffle = function() {
     size    = this._cards.length
     repeats = size / 2
-    for(var i = 0; i < size; i++) {
+    for(var i = 0; i < (size * 2); i++) {
       // change the position of a card randomly
       from              = Card.random(0, size)
       to                = Card.random(0, size)
@@ -658,6 +708,7 @@ $inherit(Card.Stack, Card.Place)
 Card.Hand = function(x, y, show) {
   Card.Place.call(this, x , y) // call parent constructor
   this._show  = show
+  this.layout()
 }
 
 $inherit(Card.Hand, Card.Place)
@@ -852,8 +903,8 @@ CardProto.make_div = function() {
   i2.innerHTML =  this.html_index_2()
   i2.setAttribute('class', 'card_index_2')
   this.make_all_spots(cdiv)
-  // install event hanedler with this as context.
-  this.click_fn = $event(cdiv, 'click', Card.Card.prototype. on_click, this)
+  // install event handler with this as context.
+  this.click_fn = $event(cdiv, 'click', Card.Card.prototype.on_click, this)
   return cdiv
 }
   
@@ -996,16 +1047,52 @@ Wipe.Game = function() {
 /** Prototype for the game's methods. */
 var GameProto = Wipe.Game.prototype
 
+/** Try-out area */
+function Foo() { this.foo = "foo" } 
+var FooProto = Foo.prototype 
+FooProto.hi = function() { $message(this.foo) }
 
+function Bar() { 
+  this.constructor.call(this) 
+  this.bar = "bar" 
+}
+
+function Quux() { 
+  Foo.call(this)
+  this.quux = "quux" 
+}
+
+function Baz() { 
+  Quux.call(this)
+  this.baz = "baz" 
+}
+
+var BarProto = $inherit(Bar, Foo)
+BarProto.hi = function() { $message(this.bar) }
+BarProto.bye = function() { $message("bye") }
+
+var QuuxProto = $inherit(Quux, Foo)
+
+QuuxProto.hi = function() { $message(this.quux) }
+
+var BazProto = $inherit(Baz, Quux)
+BazProto.hi = function() { $message(this.baz) }
 
 function main() {
+/*
+  var bar  = new Bar()
+  var foo  = new Foo()
+  var baz  = new Baz()
+  var quux = new Quux()
+  foo.hi()
+  bar.hi()
+  baz.hi()
+  quux.hi()
+*/
   var game  = new Wipe.Game()
-  var card  = game.deck.deal_one()
-  $message("Card Dealt: " + card.toString())
-  card.toggle_select()
-  game.human._hand.add(card)
-  
-  
+  var cards = game.deck.deal_to(game.human._hand, 2)  
+  $message(game.human._hand.layout.toString())
+  $message("Card Dealt: " + cards.toString())
   /*var deck  = new Card.Deck() 
   $message(deck.toString())
   $message("Deck length" + deck.size())
@@ -1032,7 +1119,8 @@ function main() {
   card3.xy(300, 240)
   card4.xy(360, 250)
   card5.xy(420, 270)*/
-  game.deck.xy(100, 200)
+  game.deck.xy(150, 200)
+  // game.human._hand.xy(200, 50)
   
   /*
   card.update()
