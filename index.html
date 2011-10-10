@@ -155,6 +155,17 @@ function $move(node, x, y) {
   node.style.top  = y.toString() + 'px'
 }
 
+/** Gets the x coordinate of a node from it's style's left.
+*/
+function $node_x(node) {
+  return parseInt(node.style.left)
+}
+
+/** Gets the y coordinate of a node from it's style's top.
+*/
+function $node_y(node) {
+  return parseInt(node.style.top)
+}
 
 /** Uses $create to create a new document node of kind kind, and appends it to 
 the parent. */
@@ -322,6 +333,12 @@ function $request(url, callback, post) {
   req.send(post);
 }
 
+/** Clamps a number between low and high */
+function $clamp(value, low, high) {
+  if (value < low) return low
+  if (value > high) return high
+  return value
+}
 
 
 /** Helpers for event handlers. */
@@ -583,6 +600,13 @@ PlaceProto.toString = function() {
   return res
 }
 
+Card.Stack = function(x, y) {
+  // call parent constructor
+  this.constructor.call(this, x, y)
+  // Card.Place.call(this, x, y)
+}
+
+var StackProto = $inherit(Card.Stack, Card.Place)
 
 /** A hand is a set of cards that players holds in their hands. */
 Card.Hand = function(x, y, hide) {
@@ -599,10 +623,9 @@ Override this method to change the physical lay-out of cards.
 By default, the cards are layed out as as stack one over the other.
 */
 HandProto.layout = function() {
-  $message("Hand Layout!")
   for (index = 0; index < this._cards.length ; index ++) {
     card = this._cards[index]
-    card.xy(this._x, this._y + (index * 30))
+    card.xy(this._x  + (index * 30), this._y, true)
     card.z(index)
     if(this.hide) { 
       card.hide 
@@ -696,24 +719,38 @@ DeckProto.shuffle = function() {
 }
 
 
-
-Card.Stack = function(x, y) {
-  // call parent constructor
-  this.constructor.call(this, x, y)
-  // Card.Place.call(this, x, y)
+/** Call with setInterval,  */
+DeckProto.animate = function() {
+  $message("animate!")
+  for (var id in this._lookup) {
+    var card = this._lookup[id]
+    card.animate()
+  }
 }
 
-$inherit(Card.Stack, Card.Place)
 
-Card.Hand = function(x, y, show) {
-  Card.Place.call(this, x , y) // call parent constructor
-  this._show  = show
-  this.layout()
+/** Installs the card animator. 
+XXX Seems to nreak down from time to time, why??? */
+DeckProto.start_animations = function() {
+  var self        = this
+  $message("start_animations")
+  function do_animate () {
+    message("animate... ")
+    // self.animate()
+  }
+  this.interval   = window.setInterval(do_animate, 500)
+  $message("start_animations interval: " + this.interval)
+  // var do_stop     = function() { clearInterval(self.interval) }
+  // this.timeout    = window.setTimeout(do_stop, 10000)
+  return this.interval
 }
 
-$inherit(Card.Hand, Card.Place)
+
+
 
 Card.Card = function(suit, rank) {
+  this._tx   = 0
+  this._ty   = 0
   this._suit = suit
   this._rank = rank
   this._show = true
@@ -908,10 +945,29 @@ CardProto.make_div = function() {
   return cdiv
 }
   
+CardProto.x = function() {
+  $node_x(this._div)
+}
+
+
+CardProto.y = function() {
+  $node_y(this._div)
+}
+  
 CardProto.update = function() {
-  if (!this._div)  this._div = this.make_div()
+  if (!this._div)  { 
+    this._div = this.make_div()
+    this._tx  = this.x()
+    this._ty  = this.y()
+  }  
   // Also update html class which may change due to _shown changing
   this._div.setAttribute('class', this.html_class())
+}
+
+CardProto.moving = function() {
+  var x_move = (this._tx != this.x())
+  var y_move = (this._ty != this.y())
+  return x_move || y_move
 }
   
 CardProto.div = function() {    
@@ -921,10 +977,35 @@ CardProto.div = function() {
   return this._div
 }
   
+CardProto.animate = function (x, y) {
+  $message("animate")
+  if (!this.moving()) { return false } 
+  $message("animate ok")
+  var dx = this.x() - this._tx
+  var dy = this.y() - this._ty
+  var mx = clamp(dx, -10, 10)
+  var my = clamp(dy, -10, 10)
+  var tx = this.x() + mx
+  var ty = this.y() + my
+  $move(this.div(), tx, ty)
+}
+  
+  
+CardProto.xy = function (x, y, slide) {
+  if (slide) {
+    this._tx = x
+    this._ty = y 
+  } else { 
+  // $message("Moved  " + this.short_name() + " to " + x + "," + y)
+    $move(this.div(), x, y)
+  }
+}
+
 CardProto.xy = function (x, y) {
   // $message("Moved  " + this.short_name() + " to " + x + "," + y)
   $move(this.div(), x, y)
 }
+
 
 CardProto.toString = CardProto.short_name
 
@@ -1044,39 +1125,6 @@ Wipe.Game = function() {
   this.ai         = this.players[1]
 }
 
-/** Prototype for the game's methods. */
-var GameProto = Wipe.Game.prototype
-
-/** Try-out area */
-function Foo() { this.foo = "foo" } 
-var FooProto = Foo.prototype 
-FooProto.hi = function() { $message(this.foo) }
-
-function Bar() { 
-  this.constructor.call(this) 
-  this.bar = "bar" 
-}
-
-function Quux() { 
-  Foo.call(this)
-  this.quux = "quux" 
-}
-
-function Baz() { 
-  Quux.call(this)
-  this.baz = "baz" 
-}
-
-var BarProto = $inherit(Bar, Foo)
-BarProto.hi = function() { $message(this.bar) }
-BarProto.bye = function() { $message("bye") }
-
-var QuuxProto = $inherit(Quux, Foo)
-
-QuuxProto.hi = function() { $message(this.quux) }
-
-var BazProto = $inherit(Baz, Quux)
-BazProto.hi = function() { $message(this.baz) }
 
 function main() {
 /*
@@ -1089,10 +1137,19 @@ function main() {
   baz.hi()
   quux.hi()
 */
+  
   var game  = new Wipe.Game()
-  var cards = game.deck.deal_to(game.human._hand, 2)  
-  $message(game.human._hand.layout.toString())
+  game.deck.start_animations()
+  var cards = game.deck.deal_to(game.human._hand, 2)
+  
+  
+  
+  
+  
+  
+/*  $message(game.human._hand.layout.toString())
   $message("Card Dealt: " + cards.toString())
+  $message(game.human._hand.toString())*/
   /*var deck  = new Card.Deck() 
   $message(deck.toString())
   $message("Deck length" + deck.size())
@@ -1119,7 +1176,7 @@ function main() {
   card3.xy(300, 240)
   card4.xy(360, 250)
   card5.xy(420, 270)*/
-  game.deck.xy(150, 200)
+  // game.deck.xy(150, 200)
   // game.human._hand.xy(200, 50)
   
   /*
@@ -1149,7 +1206,11 @@ field.appendChild(s_1)
 */
 }
 
-window.onload = main
+
+$event(window, 'load', main, window)
+
+
+// window.onload = main
 
 </script>
 </head>
