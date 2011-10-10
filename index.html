@@ -231,6 +231,19 @@ function $noevent(obj, evt, fn) {
   else if (obj.detachEvent) obj.detachEvent('on'+evt,fn)
 }
 
+/** Installs the onload event handler for the page. */
+function $load(func) {
+  var oldonload   = window.onload
+  if (typeof window.onload != 'function' ) {
+    window.onload = func
+  } else {
+    window.onload = function() { 
+      oldonload()
+      func()
+    }
+  }
+}
+
 /** Portable x coordinate for mouse event. */
 function $mouse_x(e) {
   if (e.pageX)  {  
@@ -721,7 +734,7 @@ DeckProto.shuffle = function() {
 
 /** Call with setInterval,  */
 DeckProto.animate = function() {
-  $message("animate!")
+  // $message("animate!")
   for (var id in this._lookup) {
     var card = this._lookup[id]
     card.animate()
@@ -729,16 +742,19 @@ DeckProto.animate = function() {
 }
 
 
+
+
 /** Installs the card animator. 
-XXX Seems to nreak down from time to time, why??? */
+XXX Seems to break down from time to time, why??? */
 DeckProto.start_animations = function() {
   var self        = this
-  $message("start_animations")
-  function do_animate () {
-    message("animate... ")
-    // self.animate()
+  $message("start_animations");
+  function do_animate () {    
+    self.animate()
+    return null
   }
-  this.interval   = window.setInterval(do_animate, 500)
+
+  this.interval   = window.setInterval(do_animate, 200);
   $message("start_animations interval: " + this.interval)
   // var do_stop     = function() { clearInterval(self.interval) }
   // this.timeout    = window.setTimeout(do_stop, 10000)
@@ -978,7 +994,6 @@ CardProto.div = function() {
 }
   
 CardProto.animate = function (x, y) {
-  $message("animate")
   if (!this.moving()) { return false } 
   $message("animate ok")
   var dx = this.x() - this._tx
@@ -1207,7 +1222,7 @@ field.appendChild(s_1)
 }
 
 
-$event(window, 'load', main, window)
+$load(main)
 
 
 // window.onload = main
